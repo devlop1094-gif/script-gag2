@@ -1,0 +1,1274 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lua Unpacker</title>
+
+<style>
+:root{
+  color-scheme:light dark;
+  --bg:light-dark(#f5f7fb,#0b0f16);
+  --panel:light-dark(#fff,#111722);
+  --panel2:light-dark(#f0f3f8,#171e2b);
+  --text:light-dark(#111827,#edf2f7);
+  --muted:light-dark(#667085,#98a5b5);
+  --line:light-dark(#dfe4ec,#283241);
+  --accent:#7c5cff;
+  --ok:#22c55e;
+  --danger:#ef4444;
+}
+
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,
+  BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+.root{
+  min-height:100vh;
+  padding:24px;
+}
+
+.wrap{
+  max-width:1450px;
+  margin:auto;
+}
+
+.top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:18px;
+}
+
+.brand{
+  display:flex;
+  gap:12px;
+  align-items:center;
+}
+
+.logo{
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  background:linear-gradient(135deg,#8b6cff,#5b8cff);
+  display:grid;
+  place-items:center;
+  font-weight:900;
+  color:white;
+}
+
+.title{
+  font-size:21px;
+  font-weight:800;
+}
+
+.sub{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:2px;
+}
+
+.badge{
+  border:1px solid var(--line);
+  background:var(--panel);
+  padding:7px 10px;
+  border-radius:999px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 10px 35px #0000000b;
+}
+
+.bar{
+  padding:13px 15px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.bar strong{
+  font-size:13px;
+}
+
+.tools{
+  display:flex;
+  gap:7px;
+}
+
+.btn{
+  border:1px solid var(--line);
+  background:var(--panel2);
+  color:var(--text);
+  border-radius:9px;
+  padding:8px 11px;
+  cursor:pointer;
+  font-weight:700;
+  font-size:12px;
+}
+
+.btn:hover{
+  filter:brightness(1.05);
+}
+
+.btn.primary{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff;
+}
+
+.btn:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+
+textarea{
+  display:block;
+  width:100%;
+  height:600px;
+  border:0;
+  outline:0;
+  resize:none;
+  background:transparent;
+  color:var(--text);
+  font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,
+  Consolas,monospace;
+  padding:16px;
+}
+
+.status{
+  padding:10px 14px;
+  border-top:1px solid var(--line);
+  font-size:12px;
+  color:var(--muted);
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.ok{
+  color:var(--ok);
+}
+
+.err{
+  color:var(--danger);
+}
+
+.bottom{
+  margin-top:16px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+
+.settings{
+  padding:16px;
+}
+
+.row{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin-bottom:13px;
+}
+
+.row label{
+  font-size:12px;
+  color:var(--muted);
+  min-width:120px;
+}
+
+.input{
+  flex:1;
+  border:1px solid var(--line);
+  background:var(--panel2);
+  color:var(--text);
+  border-radius:9px;
+  padding:9px 10px;
+  outline:0;
+}
+
+.hint{
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.5;
+}
+
+.drop{
+  border:1px dashed var(--line);
+  border-radius:10px;
+  padding:12px;
+  text-align:center;
+  color:var(--muted);
+  font-size:12px;
+  margin-top:10px;
+}
+
+.drop.drag{
+  border-color:var(--accent);
+  color:var(--text);
+}
+
+.progress{
+  height:4px;
+  width:100%;
+  background:var(--panel2);
+  overflow:hidden;
+  display:none;
+}
+
+.progress.active{
+  display:block;
+}
+
+.progressBar{
+  height:100%;
+  width:0%;
+  background:var(--accent);
+  transition:width .15s;
+}
+
+@media(max-width:850px){
+  .root{
+    padding:12px;
+  }
+
+  .grid,
+  .bottom{
+    grid-template-columns:1fr;
+  }
+
+  .top{
+    align-items:flex-start;
+  }
+
+  .badge{
+    display:none;
+  }
+
+  textarea{
+    height:430px;
+  }
+
+  .row{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .row label{
+    min-width:auto;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<main class="root">
+<div class="wrap">
+
+<header class="top">
+
+<div class="brand">
+<div class="logo">LU</div>
+
+<div>
+<div class="title">Lua Unpacker</div>
+<div class="sub">Large Lua / Luau script processor</div>
+</div>
+
+</div>
+
+<div class="badge" id="sizeBadge">0 B</div>
+
+</header>
+
+
+<section class="grid">
+
+<!-- INPUT -->
+
+<div class="card">
+
+<div class="bar">
+
+<strong>INPUT · Lua / Luau</strong>
+
+<div class="tools">
+<button class="btn" id="fileBtn">파일 열기</button>
+<button class="btn" id="clearBtn">지우기</button>
+</div>
+
+</div>
+
+<textarea
+id="input"
+spellcheck="false"
+placeholder="Lua 코드를 붙여넣으세요..."
+></textarea>
+
+<input
+id="file"
+type="file"
+accept=".lua,.luau,.txt"
+hidden
+>
+
+<div class="status">
+
+<span id="inStatus">
+준비됨
+</span>
+
+<span id="inLines">
+0 lines
+</span>
+
+</div>
+
+</div>
+
+
+<!-- OUTPUT -->
+
+<div class="card">
+
+<div class="bar">
+
+<strong>OUTPUT · Result</strong>
+
+<div class="tools">
+
+<button class="btn" id="copyBtn">
+복사
+</button>
+
+<button class="btn" id="downloadBtn">
+저장
+</button>
+
+</div>
+
+</div>
+
+<textarea
+id="output"
+spellcheck="false"
+readonly
+placeholder="결과가 여기에 표시됩니다..."
+></textarea>
+
+<div class="status">
+
+<span id="outStatus">
+대기 중
+</span>
+
+<span id="outLines">
+0 lines
+</span>
+
+</div>
+
+</div>
+
+</section>
+
+
+<section class="bottom">
+
+
+<!-- PROCESSOR -->
+
+<div class="card">
+
+<div class="bar">
+
+<strong>PROCESSOR</strong>
+
+<button
+class="btn primary"
+id="runBtn"
+>
+변환 실행
+</button>
+
+</div>
+
+
+<div class="settings">
+
+<div class="row">
+
+<label>
+API Endpoint
+</label>
+
+<input
+class="input"
+id="endpoint"
+value="https://api.realw.kr/obfuscate/v1"
+>
+
+</div>
+
+
+<div class="row">
+
+<label>
+API Method
+</label>
+
+<select
+class="input"
+id="method"
+>
+
+<option value="POST">
+POST
+</option>
+
+</select>
+
+</div>
+
+
+<div class="row">
+
+<label>
+Response
+</label>
+
+<select
+class="input"
+id="mode"
+>
+
+<option value="auto">
+Auto
+</option>
+
+<option value="json">
+JSON
+</option>
+
+<option value="text">
+Plain Text
+</option>
+
+</select>
+
+</div>
+
+
+<div class="row">
+
+<label>
+Timeout
+</label>
+
+<input
+class="input"
+id="timeout"
+value="120000"
+inputmode="numeric"
+>
+
+</div>
+
+
+<div class="hint">
+
+API 요청은 기본적으로 다음 JSON 형식으로 전송됩니다.
+
+<br><br>
+
+<code>
+{
+  "code": "...",
+  "source": "..."
+}
+</code>
+
+<br><br>
+
+서버가 다른 필드명을 요구한다면
+아래 JavaScript의 <b>callAPI()</b> 부분만 수정하면 됩니다.
+
+</div>
+
+
+<div class="progress" id="progress">
+
+<div
+class="progressBar"
+id="progressBar"
+></div>
+
+</div>
+
+
+<div
+class="drop"
+id="drop"
+>
+.lua / .luau 파일을 여기로 드래그 앤 드롭
+</div>
+
+</div>
+
+</div>
+
+
+<!-- LOCAL -->
+
+<div class="card">
+
+<div class="bar">
+
+<strong>TOOLS</strong>
+
+<span class="badge">
+LOCAL
+</span>
+
+</div>
+
+
+<div class="settings">
+
+<button
+class="btn"
+id="formatBtn"
+>
+간단 정리
+</button>
+
+<button
+class="btn"
+id="swapBtn"
+>
+입출력 교체
+</button>
+
+<button
+class="btn"
+id="selectInputBtn"
+>
+전체 선택
+</button>
+
+
+<br><br>
+
+<div class="hint">
+
+API 호출이 실패한 경우 결과가 없는 상태에서
+임의로 "난독화 해제 완료"라고 표시하지 않습니다.
+
+<br><br>
+
+간단 정리는 줄 끝 공백과 과도한 빈 줄을 정리합니다.
+실제 난독화 해제는 서버/API 처리 결과를 사용합니다.
+
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+</div>
+</main>
+
+
+<script>
+
+const $ = id => document.getElementById(id);
+
+const input = $("input");
+const output = $("output");
+
+
+/* -------------------------
+   기본 정보
+------------------------- */
+
+function bytes(text){
+
+    return new Blob([text]).size;
+
+}
+
+
+function lines(text){
+
+    if(!text) return 0;
+
+    return text.split(/\r?\n/).length;
+
+}
+
+
+function refresh(){
+
+    const size = bytes(input.value);
+
+    $("sizeBadge").textContent =
+        size.toLocaleString() + " B";
+
+    $("inLines").textContent =
+        lines(input.value).toLocaleString() +
+        " lines";
+
+}
+
+
+function setOutput(text){
+
+    output.value = text || "";
+
+    $("outLines").textContent =
+        lines(output.value).toLocaleString() +
+        " lines";
+
+}
+
+
+/* -------------------------
+   파일
+------------------------- */
+
+$("fileBtn").onclick = () => {
+
+    $("file").click();
+
+};
+
+
+$("file").onchange = async event => {
+
+    const file = event.target.files[0];
+
+    if(!file) return;
+
+    try{
+
+        input.value = await file.text();
+
+        refresh();
+
+        $("inStatus").textContent =
+            file.name;
+
+    }catch(error){
+
+        $("inStatus").textContent =
+            "파일 읽기 실패";
+
+    }
+
+};
+
+
+/* -------------------------
+   드래그 앤 드롭
+------------------------- */
+
+const drop = $("drop");
+
+
+["dragenter","dragover"].forEach(eventName => {
+
+    drop.addEventListener(eventName, event => {
+
+        event.preventDefault();
+
+        drop.classList.add("drag");
+
+    });
+
+});
+
+
+["dragleave","drop"].forEach(eventName => {
+
+    drop.addEventListener(eventName, event => {
+
+        event.preventDefault();
+
+        drop.classList.remove("drag");
+
+    });
+
+});
+
+
+drop.addEventListener("drop", async event => {
+
+    const file =
+        event.dataTransfer.files[0];
+
+    if(!file) return;
+
+    try{
+
+        input.value = await file.text();
+
+        refresh();
+
+        $("inStatus").textContent =
+            file.name;
+
+    }catch(error){
+
+        $("inStatus").textContent =
+            "파일 읽기 실패";
+
+    }
+
+});
+
+
+/* -------------------------
+   지우기
+------------------------- */
+
+$("clearBtn").onclick = () => {
+
+    input.value = "";
+
+    output.value = "";
+
+    refresh();
+
+    $("inStatus").textContent =
+        "준비됨";
+
+    $("outStatus").textContent =
+        "대기 중";
+
+    $("outLines").textContent =
+        "0 lines";
+
+};
+
+
+/* -------------------------
+   복사
+------------------------- */
+
+$("copyBtn").onclick = async () => {
+
+    if(!output.value){
+
+        $("outStatus").textContent =
+            "복사할 결과가 없습니다.";
+
+        return;
+
+    }
+
+    try{
+
+        await navigator.clipboard.writeText(
+            output.value
+        );
+
+        $("outStatus").textContent =
+            "복사 완료";
+
+    }catch(error){
+
+        output.select();
+
+        document.execCommand("copy");
+
+        $("outStatus").textContent =
+            "복사 완료";
+
+    }
+
+};
+
+
+/* -------------------------
+   다운로드
+------------------------- */
+
+$("downloadBtn").onclick = () => {
+
+    if(!output.value){
+
+        $("outStatus").textContent =
+            "저장할 결과가 없습니다.";
+
+        return;
+
+    }
+
+    const blob =
+        new Blob(
+            [output.value],
+            {
+                type:
+                "text/plain;charset=utf-8"
+            }
+        );
+
+    const url =
+        URL.createObjectURL(blob);
+
+    const a =
+        document.createElement("a");
+
+    a.href = url;
+
+    a.download =
+        "result.lua";
+
+    document.body.appendChild(a);
+
+    a.click();
+
+    a.remove();
+
+    URL.revokeObjectURL(url);
+
+};
+
+
+/* -------------------------
+   입출력 교체
+------------------------- */
+
+$("swapBtn").onclick = () => {
+
+    const oldInput =
+        input.value;
+
+    input.value =
+        output.value;
+
+    output.value =
+        oldInput;
+
+    refresh();
+
+    $("outLines").textContent =
+        lines(output.value).toLocaleString() +
+        " lines";
+
+};
+
+
+/* -------------------------
+   전체 선택
+------------------------- */
+
+$("selectInputBtn").onclick = () => {
+
+    input.focus();
+
+    input.select();
+
+};
+
+
+/* -------------------------
+   간단 정리
+------------------------- */
+
+$("formatBtn").onclick = () => {
+
+    let code =
+        input.value;
+
+    if(!code){
+
+        $("outStatus").textContent =
+            "입력 없음";
+
+        return;
+
+    }
+
+    code =
+        code
+        .replace(/\r\n/g,"\n")
+        .replace(/[ \t]+$/gm,"")
+        .replace(/\n{4,}/g,"\n\n\n");
+
+    setOutput(code);
+
+    $("outStatus").textContent =
+        "로컬 정리 완료";
+
+};
+
+
+/* -------------------------
+   API 응답 추출
+------------------------- */
+
+function extractResult(data){
+
+    if(typeof data === "string"){
+
+        return data;
+
+    }
+
+    if(!data){
+
+        return "";
+
+    }
+
+
+    const candidates = [
+
+        data.result,
+        data.output,
+        data.code,
+        data.source,
+        data.lua,
+        data.luau,
+        data.deobfuscated,
+        data.deobfuscation,
+        data.content,
+        data.data?.result,
+        data.data?.output,
+        data.data?.code,
+        data.data?.content
+
+    ];
+
+
+    for(const value of candidates){
+
+        if(typeof value === "string"){
+
+            return value;
+
+        }
+
+    }
+
+
+    return JSON.stringify(
+        data,
+        null,
+        2
+    );
+
+}
+
+
+/* -------------------------
+   API 호출
+------------------------- */
+
+async function callAPI(code){
+
+    const endpoint =
+        $("endpoint").value.trim();
+
+    if(!endpoint){
+
+        throw new Error(
+            "API Endpoint가 비어 있습니다."
+        );
+
+    }
+
+
+    const mode =
+        $("mode").value;
+
+    let timeout =
+        Number(
+            $("timeout").value
+        );
+
+    if(!Number.isFinite(timeout) ||
+       timeout < 1000){
+
+        timeout = 120000;
+
+    }
+
+
+    const controller =
+        new AbortController();
+
+    const timer =
+        setTimeout(
+            () => controller.abort(),
+            timeout
+        );
+
+
+    try{
+
+        const response =
+            await fetch(
+                endpoint,
+                {
+                    method:"POST",
+
+                    headers:{
+                        "Content-Type":
+                        "application/json",
+
+                        "Accept":
+                        "application/json,text/plain,*/*"
+                    },
+
+                    body:JSON.stringify({
+
+                        code:code,
+
+                        source:code
+
+                    }),
+
+                    signal:
+                    controller.signal
+                }
+            );
+
+
+        const contentType =
+            response.headers.get(
+                "content-type"
+            ) || "";
+
+
+        let data;
+
+
+        if(
+            mode === "json" ||
+            (
+                mode === "auto" &&
+                contentType
+                .toLowerCase()
+                .includes("json")
+            )
+        ){
+
+            data =
+                await response.json();
+
+        }else{
+
+            data =
+                await response.text();
+
+        }
+
+
+        if(!response.ok){
+
+            let message =
+                typeof data === "string"
+                ? data.slice(0,500)
+                : JSON.stringify(data);
+
+            throw new Error(
+                "HTTP " +
+                response.status +
+                " : " +
+                message
+            );
+
+        }
+
+
+        return extractResult(data);
+
+    }catch(error){
+
+        if(
+            error.name ===
+            "AbortError"
+        ){
+
+            throw new Error(
+                "API 요청 시간 초과"
+            );
+
+        }
+
+        throw error;
+
+    }finally{
+
+        clearTimeout(timer);
+
+    }
+
+}
+
+
+/* -------------------------
+   실행
+------------------------- */
+
+$("runBtn").onclick =
+async () => {
+
+    const code =
+        input.value;
+
+    if(!code){
+
+        $("inStatus").textContent =
+            "입력 없음";
+
+        return;
+
+    }
+
+
+    const button =
+        $("runBtn");
+
+    const progress =
+        $("progress");
+
+    const progressBar =
+        $("progressBar");
+
+
+    button.disabled = true;
+
+    progress.classList.add(
+        "active"
+    );
+
+    progressBar.style.width =
+        "15%";
+
+
+    $("inStatus").textContent =
+        "처리 중...";
+
+    $("outStatus").textContent =
+        "API 요청 중...";
+
+
+    try{
+
+        progressBar.style.width =
+            "35%";
+
+
+        const result =
+            await callAPI(code);
+
+
+        progressBar.style.width =
+            "85%";
+
+
+        if(!result){
+
+            throw new Error(
+                "API에서 결과를 반환하지 않았습니다."
+            );
+
+        }
+
+
+        setOutput(result);
+
+
+        progressBar.style.width =
+            "100%";
+
+
+        $("outStatus").textContent =
+            "완료 · " +
+            bytes(result).toLocaleString() +
+            " B";
+
+
+        $("inStatus").textContent =
+            "입력 " +
+            bytes(code).toLocaleString() +
+            " B";
+
+
+    }catch(error){
+
+        $("outStatus").textContent =
+            "실패: " +
+            error.message;
+
+        $("outLines").textContent =
+            "0 lines";
+
+
+    }finally{
+
+        setTimeout(() => {
+
+            progress.classList.remove(
+                "active"
+            );
+
+            progressBar.style.width =
+                "0%";
+
+        },300);
+
+        button.disabled = false;
+
+    }
+
+};
+
+
+/* -------------------------
+   입력 이벤트
+------------------------- */
+
+input.addEventListener(
+    "input",
+    refresh
+);
+
+
+/* -------------------------
+   초기화
+------------------------- */
+
+refresh();
+
+</script>
+
+</body>
+</html>
